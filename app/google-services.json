@@ -1,0 +1,69 @@
+{
+  "project_info": {
+    "project_number": "180826074845",
+    "firebase_url": "https://valenitn-music.firebaseio.com",
+    "project_id": "valenitn-music",
+    "storage_bucket": "valenitn-music.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:180826074845:android:ded8d84fa3c83b39e0b534",
+        "android_client_info": {
+          "package_name": "com.example.musicplayer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "180826074845-dokj33e57kus97cal88cmnaue6a1j1rk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyQOt2pcINzMjJyo99xj8uVJRzNc85Mtw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "180826074845-dokj33e57kus97cal88cmnaue6a1j1rk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:180826074845:android:16a783142b3b9dabe0b534",
+        "android_client_info": {
+          "package_name": "com.example.mymusicplayer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "180826074845-dokj33e57kus97cal88cmnaue6a1j1rk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyQOt2pcINzMjJyo99xj8uVJRzNc85Mtw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "180826074845-dokj33e57kus97cal88cmnaue6a1j1rk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
