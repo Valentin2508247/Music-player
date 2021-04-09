@@ -1,3 +1,8 @@
 package com.example.musicplayer.repositories
 
-class SongsRepository
+import com.example.musicplayer.database.SongDao
+import com.example.musicplayer.firebase.SongsFirebase
+
+class SongsRepository(val songDao: SongDao, val songsFirebase: SongsFirebase){
+
+}

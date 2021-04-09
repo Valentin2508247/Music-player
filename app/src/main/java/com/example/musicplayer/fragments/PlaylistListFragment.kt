@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.ViewModelProvider
 import com.example.musicplayer.R
+import com.example.musicplayer.database.Playlist
 import com.example.musicplayer.fragments.dummy.DummyContent
 import com.example.musicplayer.repositories.PlaylistRepository
 import com.example.musicplayer.view_models.PlaylistsViewModel
@@ -56,7 +57,7 @@ class PlaylistListFragment : Fragment() {
                     columnCount <= 1 -> LinearLayoutManager(context)
                     else -> GridLayoutManager(context, columnCount)
                 }
-                adapter = MyPlaylistRecyclerViewAdapter(DummyContent.ITEMS)
+                adapter = MyPlaylistRecyclerViewAdapter(listOf(Playlist(), Playlist(), Playlist()))
             }
         }
         return view

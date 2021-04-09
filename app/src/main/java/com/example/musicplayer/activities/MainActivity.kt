@@ -3,6 +3,7 @@ package com.example.musicplayer.activities
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
@@ -13,6 +14,9 @@ import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.example.musicplayer.R
+import com.example.musicplayer.database.Song
+import com.example.musicplayer.firebase.FirebaseConsts
+import com.example.musicplayer.firebase.SongsFirebase
 import com.example.musicplayer.fragments.BlankFragment
 import com.example.musicplayer.fragments.PlaylistListFragment
 import com.example.musicplayer.fragments.ScrollingFragment
@@ -21,16 +25,20 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.database.FirebaseDatabase
+import io.reactivex.Maybe
 
 
 class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
+    private val TAG = "MainActivity2"
+
     lateinit var mAuth: FirebaseAuth
+    lateinit var mDatabase: FirebaseDatabase
     lateinit var currentUser: FirebaseUser
     lateinit var viewPager: ViewPager2
     lateinit var pagesAdapter: ScreenSlidePagerAdapter
     lateinit var bottomNavigation: BottomNavigationView
 
-    //lateinit var bottomNavigationListener: BottomNavigationView.OnNavigationItemSelectedListener
 //    @Inject
 //    lateinit var mDatabase: AppDatabase
 
@@ -38,51 +46,35 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         //(application as MyApplication).appComponent.inject(this)
+        mDatabase = FirebaseDatabase.getInstance()
+        mAuth = FirebaseAuth.getInstance()
+        val songsFirebase = SongsFirebase(mDatabase)
+
+        // firebase loading songs
+//        val path = FirebaseConsts.songsRef
+//        val maybe: Maybe<MutableList<Song>> = songsFirebase.readSongs(path)
+//        val disposable = maybe.subscribe({
+//                // onSuccess
+//                Log.d(TAG, "onSuccess")
+//                for (song: Song? in it){
+//                    Log.d(TAG, "$song")
+//                }
+//            },
+//            {
+//                // onError
+//                Log.d(TAG, "onError")
+//                Log.d(TAG, it.message)
+//                it.printStackTrace()
+//            },
+//            {
+//                // onComplete
+//                Log.d(TAG, "onComplete")
+//            })
 
         viewPager = findViewById(R.id.view_pager)
         bottomNavigation = findViewById(R.id.bottom_navigation)
-        pagesAdapter = ScreenSlidePagerAdapter(this)
-        viewPager.adapter = pagesAdapter
-
-        class ViewPager2PageChangeCallback() : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                super.onPageSelected(position)
-                //Toast.makeText(this@MainActivity, "Position: $position", Toast.LENGTH_SHORT).show()
-
-                val item_id = when (position) {
-                    0 -> R.id.scrolling_menu_item
-                    1 -> R.id.playlists_menu_item
-                    2 -> R.id.songs_menu_item
-                    else -> R.id.scrolling_menu_item
-                }
-
-                bottomNavigation.selectedItemId = item_id
-            }
-        }
-        viewPager.registerOnPageChangeCallback(ViewPager2PageChangeCallback())
-
-
-        val bottomNavigationListener = BottomNavigationView.OnNavigationItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.scrolling_menu_item -> {
-                    viewPager.currentItem = 0
-                    return@OnNavigationItemSelectedListener true
-                }
-                R.id.playlists_menu_item -> {
-                    viewPager.currentItem = 1
-                    return@OnNavigationItemSelectedListener true
-                }
-                R.id.songs_menu_item -> {
-                    viewPager.currentItem = 2
-                    return@OnNavigationItemSelectedListener true
-                }
-            }
-            false
-        }
-        bottomNavigation.setOnNavigationItemSelectedListener(bottomNavigationListener)
-
-        mAuth = FirebaseAuth.getInstance()
-
+        setupViewPager()
+        setupBottomNavigation()
 
 //        // SnackBar example
 //        class MyUndoListener : View.OnClickListener {
@@ -176,5 +168,47 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
                 }
                 else -> BlankFragment()
             }
+    }
+
+    private fun setupViewPager(){
+        pagesAdapter = ScreenSlidePagerAdapter(this)
+        viewPager.adapter = pagesAdapter
+
+        class ViewPager2PageChangeCallback() : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                //Toast.makeText(this@MainActivity, "Position: $position", Toast.LENGTH_SHORT).show()
+
+                val item_id = when (position) {
+                    0 -> R.id.scrolling_menu_item
+                    1 -> R.id.playlists_menu_item
+                    2 -> R.id.songs_menu_item
+                    else -> R.id.scrolling_menu_item
+                }
+                bottomNavigation.selectedItemId = item_id
+            }
+        }
+        viewPager.registerOnPageChangeCallback(ViewPager2PageChangeCallback())
+    }
+
+    private fun setupBottomNavigation(){
+        val bottomNavigationListener = BottomNavigationView.OnNavigationItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.scrolling_menu_item -> {
+                    viewPager.currentItem = 0
+                    return@OnNavigationItemSelectedListener true
+                }
+                R.id.playlists_menu_item -> {
+                    viewPager.currentItem = 1
+                    return@OnNavigationItemSelectedListener true
+                }
+                R.id.songs_menu_item -> {
+                    viewPager.currentItem = 2
+                    return@OnNavigationItemSelectedListener true
+                }
+            }
+            false
+        }
+        bottomNavigation.setOnNavigationItemSelectedListener(bottomNavigationListener)
     }
 }
