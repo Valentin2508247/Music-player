@@ -9,6 +9,9 @@ interface SongDao {
     @Query("Select * from song")
     fun getAllSongs(): LiveData<List<Song>>
 
+    @Query("Select * from song where id in (:ids)")
+    fun getSongsByIds(ids: List<String>): LiveData<List<Song>>
+
     @Query("Select * from song where id = :id")
     fun getSong(id: String): Song
 

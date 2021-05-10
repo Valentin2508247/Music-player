@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [Code::class, Song::class, Playlist::class], version = 6)
+@Database(entities = [Code::class, Song::class, Playlist::class], version = 8)
 @TypeConverters(MyTypeConverter::class)
 abstract class AppDatabase: RoomDatabase() {
     abstract fun codeDao(): CodeDao

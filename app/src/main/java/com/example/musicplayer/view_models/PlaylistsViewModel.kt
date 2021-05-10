@@ -1,14 +1,43 @@
 package com.example.musicplayer.view_models
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.musicplayer.database.Playlist
+import com.example.musicplayer.database.Song
+import com.example.musicplayer.firebase.FirebaseConsts
 import com.example.musicplayer.repositories.PlaylistRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class PlaylistsViewModel(private val repository: PlaylistRepository): ViewModel() {
     private val TAG: String = "PlaylistsViewModel"
 
+    val playlistsLiveData: LiveData<List<Playlist>> = getAllPlaylists()
 
+    init{
+        updatePlaylists()
+    }
+
+    private fun getAllPlaylists(): LiveData<List<Playlist>> {
+        return repository.playlistDao.getAllPlaylists()
+    }
+
+    fun updatePlaylists(){
+        viewModelScope.async(Dispatchers.IO) {
+            val playlists = repository.playlistsFirebase.readPlaylistsUsingCoroutines(FirebaseConsts.playlistsDatabaseRef)
+            playlists?.let{
+                Log.d(TAG, "Deleting all playlists")
+                repository.playlistDao.deleteAllPlaylists()
+                Log.d(TAG, "Inserting playlists")
+                repository.playlistDao.insertAllPlaylists(playlists)
+            }
+        }
+    }
 }
 
 class PlaylistsViewModelFactory(private val repository: PlaylistRepository) : ViewModelProvider.Factory {

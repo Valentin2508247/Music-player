@@ -1,43 +1,76 @@
 package com.example.musicplayer.activities
 
-import android.content.DialogInterface
+import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
+import android.database.Cursor
+import android.net.Uri
 import android.os.Bundle
+import android.os.IBinder
+import android.provider.MediaStore
 import android.util.Log
+import android.view.Menu
+import android.view.MenuInflater
 import android.view.MenuItem
-import android.view.View
+import android.widget.Button
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.menu.MenuBuilder
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.example.musicplayer.R
-import com.example.musicplayer.database.Song
 import com.example.musicplayer.firebase.FirebaseConsts
 import com.example.musicplayer.firebase.SongsFirebase
 import com.example.musicplayer.fragments.BlankFragment
 import com.example.musicplayer.fragments.PlaylistListFragment
 import com.example.musicplayer.fragments.ScrollingFragment
 import com.example.musicplayer.fragments.SongListFragment
+import com.example.musicplayer.player.Audio
+import com.example.musicplayer.player.MediaPlayerService
+import com.example.musicplayer.player.StorageUtil
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.FirebaseDatabase
-import io.reactivex.Maybe
+import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 
 class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
     private val TAG = "MainActivity2"
 
     lateinit var mAuth: FirebaseAuth
-    lateinit var mDatabase: FirebaseDatabase
+    lateinit var firebaseDatabase: FirebaseDatabase
+    lateinit var firebaseStorage: FirebaseStorage
     lateinit var currentUser: FirebaseUser
     lateinit var viewPager: ViewPager2
     lateinit var pagesAdapter: ScreenSlidePagerAdapter
     lateinit var bottomNavigation: BottomNavigationView
+
+    // Music player service
+    private var player: MediaPlayerService? = null
+    private var serviceBound = false
+    var audioList: ArrayList<Audio>? = null
+    //Binding this Client to the AudioPlayer Service
+    private val serviceConnection: ServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            val binder = service as MediaPlayerService.LocalBinder
+            player = binder.service
+            serviceBound = true
+            Toast.makeText(this@MainActivity, "Service Bound", Toast.LENGTH_SHORT).show()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            serviceBound = false
+        }
+    }
+
 
 //    @Inject
 //    lateinit var mDatabase: AppDatabase
@@ -45,10 +78,23 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        setSupportActionBar(findViewById(R.id.my_toolbar))
+
         //(application as MyApplication).appComponent.inject(this)
-        mDatabase = FirebaseDatabase.getInstance()
+        firebaseDatabase = FirebaseDatabase.getInstance()
+        firebaseStorage = FirebaseStorage.getInstance()
         mAuth = FirebaseAuth.getInstance()
-        val songsFirebase = SongsFirebase(mDatabase)
+
+        val songsFirebase = SongsFirebase(firebaseDatabase, firebaseStorage)
+
+
+        initViews()
+
+        loadAudio();
+        //play the first audio in the ArrayList
+
+
+
 
         // firebase loading songs
 //        val path = FirebaseConsts.songsRef
@@ -71,10 +117,6 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
 //                Log.d(TAG, "onComplete")
 //            })
 
-        viewPager = findViewById(R.id.view_pager)
-        bottomNavigation = findViewById(R.id.bottom_navigation)
-        setupViewPager()
-        setupBottomNavigation()
 
 //        // SnackBar example
 //        class MyUndoListener : View.OnClickListener {
@@ -111,6 +153,28 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
 //            inflate(R.menu.popup_menu)
 //            show()
 //        }
+    }
+
+    private fun initViews() {
+        viewPager = findViewById(R.id.view_pager)
+        bottomNavigation = findViewById(R.id.bottom_navigation)
+        setupViewPager()
+        setupBottomNavigation()
+        findViewById<Button>(R.id.load_songs_button).setOnClickListener {
+//            GlobalScope.launch {
+//                val songs = songsFirebase.readSongsUsingCoroutines(FirebaseConsts.songsDatabaseRef)
+////                songs?.let {
+////                    for (song in it)
+////                        Log.d(TAG, "$song")
+////                }
+//            }
+            audioList?.let{
+                playAudio(1)
+            }
+
+//            val intent = Intent(this@MainActivity, NowPlayingActivity::class.java)
+//            startActivity(intent)
+        }
     }
 
     override fun onStart() {
@@ -210,5 +274,95 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
             false
         }
         bottomNavigation.setOnNavigationItemSelectedListener(bottomNavigationListener)
+    }
+
+    @SuppressLint("RestrictedApi")
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+
+        if (menu is MenuBuilder) (menu as MenuBuilder).setOptionalIconsVisible(true)
+        val inflater: MenuInflater = menuInflater
+        inflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // Handle item selection
+        return when (item.itemId) {
+            R.id.action_create_playlist -> {
+                Toast.makeText(this, "Create playlist", Toast.LENGTH_SHORT).show()
+                val intent = Intent(this, CreatePlaylistActivity::class.java)
+                startActivity(intent)
+                true
+            }
+            R.id.action_upload_song -> {
+                Toast.makeText(this, "Upload song", Toast.LENGTH_SHORT).show()
+                val intent = Intent(this, UploadSongActivity::class.java)
+                startActivity(intent)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    override fun onSaveInstanceState(savedInstanceState: Bundle) {
+        savedInstanceState.putBoolean("ServiceState", serviceBound)
+        super.onSaveInstanceState(savedInstanceState)
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        serviceBound = savedInstanceState.getBoolean("ServiceState")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (serviceBound) {
+            unbindService(serviceConnection)
+            //service is active
+            player!!.stopSelf()
+        }
+    }
+
+    private fun playAudio(audioIndex: Int) {
+        //Check is service is active
+        if (!serviceBound) {
+            //Store Serializable audioList to SharedPreferences
+            val storage = StorageUtil(applicationContext)
+            storage.storeAudio(audioList)
+            storage.storeAudioIndex(audioIndex)
+            val playerIntent = Intent(this, MediaPlayerService::class.java)
+            startService(playerIntent)
+            bindService(playerIntent, serviceConnection, BIND_AUTO_CREATE)
+        } else {
+            //Store the new audioIndex to SharedPreferences
+            val storage = StorageUtil(applicationContext)
+            storage.storeAudioIndex(audioIndex)
+
+            //Service is active
+            //Send a broadcast to the service -> PLAY_NEW_AUDIO
+            val broadcastIntent = Intent(NowPlayingActivity.Broadcast_PLAY_NEW_AUDIO)
+            sendBroadcast(broadcastIntent)
+        }
+    }
+
+    private fun loadAudio() {
+        val contentResolver = contentResolver
+        val uri: Uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val selection = MediaStore.Audio.Media.IS_MUSIC + "!= 0"
+        val sortOrder = MediaStore.Audio.Media.TITLE + " ASC"
+        val cursor: Cursor? = contentResolver.query(uri, null, selection, null, sortOrder)
+        if (cursor != null && cursor.getCount() > 0) {
+            audioList = ArrayList()
+            while (cursor.moveToNext()) {
+                val data: String = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA))
+                val title: String = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE))
+                val album: String = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM))
+                val artist: String = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST))
+
+                // Save to audioList
+                audioList!!.add(Audio(data, title, album, artist))
+            }
+        }
+        cursor?.close()
     }
 }
