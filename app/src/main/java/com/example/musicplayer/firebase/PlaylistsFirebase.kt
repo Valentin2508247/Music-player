@@ -4,6 +4,7 @@ import android.net.Uri
 import android.util.Log
 import com.example.musicplayer.database.Playlist
 import com.example.musicplayer.database.Song
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.Dispatchers
@@ -14,8 +15,15 @@ import java.io.File
 class PlaylistsFirebase(private val mDatabase: FirebaseDatabase, private val mStorage: FirebaseStorage) {
     private val TAG = "PlaylistsFirebase"
 
-    suspend fun uploadPlaylist(playlist: Playlist){
-        val reference = mDatabase.reference.child(FirebaseConsts.playlistsDatabaseRef)
+    suspend fun uploadPlaylist(playlist: Playlist, isShared: Boolean){
+        var reference = mDatabase.reference
+        if (isShared)
+            reference = reference.child(FirebaseConsts.playlistsDatabaseRef)
+        else {
+            val user = FirebaseAuth.getInstance().currentUser
+            val userId = user.uid
+            reference = reference.child("${FirebaseConsts.privatePlaylistsDatabaseRef}/${userId}")
+        }
         val key = reference.push().key
 
         if (key == null) {
@@ -90,4 +98,11 @@ class PlaylistsFirebase(private val mDatabase: FirebaseDatabase, private val mSt
         //Log.d(TAG, "Song: $song")
         return url
     }
+
+    fun updatePlaylist(playlist: Playlist, id: String){
+        val reference = mDatabase.reference.child("${FirebaseConsts.playlistsDatabaseRef}/${id}")
+
+        reference.setValue(playlist)
+    }
+
 }

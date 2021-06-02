@@ -6,13 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.musicplayer.database.Playlist
-import com.example.musicplayer.database.Song
 import com.example.musicplayer.firebase.FirebaseConsts
 import com.example.musicplayer.repositories.PlaylistRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+
 
 class PlaylistsViewModel(private val repository: PlaylistRepository): ViewModel() {
     private val TAG: String = "PlaylistsViewModel"
@@ -20,7 +18,7 @@ class PlaylistsViewModel(private val repository: PlaylistRepository): ViewModel(
     val playlistsLiveData: LiveData<List<Playlist>> = getAllPlaylists()
 
     init{
-        updatePlaylists()
+        //updatePlaylists()
     }
 
     private fun getAllPlaylists(): LiveData<List<Playlist>> {

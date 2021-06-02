@@ -35,6 +35,7 @@ class CreatePlaylistActivity : AppCompatActivity() {
     private lateinit var playlistName: EditText
     private lateinit var btnPickImage: Button
     private lateinit var btnUploadPlaylist: Button
+    private lateinit var checkBox: CheckBox
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,6 +82,7 @@ class CreatePlaylistActivity : AppCompatActivity() {
             // TODO: Camera permissions
             pickImage()
         }
+        checkBox = findViewById(R.id.share_checkbox)
         btnUploadPlaylist = findViewById(R.id.btn_create_playlist)
         btnUploadPlaylist.setOnClickListener {
             uploadPlaylist()
@@ -103,9 +105,10 @@ class CreatePlaylistActivity : AppCompatActivity() {
     private fun uploadPlaylist(){
         if (viewModel.isFileSelected.value == null || viewModel.isFileSelected.value == false)
             Toast.makeText(this, "Image needed", Toast.LENGTH_SHORT).show()
+        val isShared = checkBox.isChecked
         val name = playlistName.text.toString()
         val playlist = Playlist("", name, null, null, null)
-        viewModel.uploadPlaylist(playlist)
+        viewModel.uploadPlaylist(playlist, isShared)
         mDatabase.playlistDao().insertPlaylist(playlist)
         finish()
     }

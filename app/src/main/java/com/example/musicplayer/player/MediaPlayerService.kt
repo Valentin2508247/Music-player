@@ -27,7 +27,8 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import com.example.musicplayer.activities.NowPlayingActivity
+import com.example.musicplayer.activities.MainActivity
+import com.example.musicplayer.database.Song
 import java.io.IOException
 
 
@@ -47,6 +48,12 @@ class MediaPlayerService : Service(), OnCompletionListener,
     private var audioIndex = -1
     private var activeAudio : Audio? = null
     //an object of the currently playing audio
+
+    private var songList: ArrayList<Song>? = null
+    private var songIndex = -1
+    private var activeSong : Song? = null
+    //an object of the currently playing song
+
 
     //path to the audio file
     private var mediaFile: String? = null
@@ -75,14 +82,24 @@ class MediaPlayerService : Service(), OnCompletionListener,
         try {
             //Load data from SharedPreferences
             val storage = StorageUtil(applicationContext)
-            audioList = storage.loadAudio()
-            audioIndex = storage.loadAudioIndex()
-            if (audioIndex != -1 && audioIndex < audioList!!.size) {
+//            audioList = storage.loadAudio()
+//            audioIndex = storage.loadAudioIndex()
+//            if (audioIndex != -1 && audioIndex < audioList!!.size) {
+//                //index is in a valid range
+//                activeAudio = audioList!![audioIndex]
+//            } else {
+//                stopSelf()
+//            }
+
+            songList = storage.loadSong()
+            songIndex = storage.loadSongIndex()
+            if (songIndex != -1 && songIndex < songList!!.size) {
                 //index is in a valid range
-                activeAudio = audioList!![audioIndex]
+                activeSong = songList!![songIndex]
             } else {
                 stopSelf()
             }
+
         } catch (e: java.lang.NullPointerException) {
             stopSelf()
         }
@@ -135,8 +152,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
                 resumeMedia()
                 buildNotification(PlaybackStatus.PLAYING)
             }
-
-
 
             override fun onPause() {
                 super.onPause()
@@ -224,25 +239,56 @@ class MediaPlayerService : Service(), OnCompletionListener,
         val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
 
         notificationBuilder.
-            setShowWhen(false) // Set the Notification style
-            .setStyle(
-                androidx.media.app.NotificationCompat.MediaStyle() // Attach our MediaSession token
-                    .setMediaSession(mediaSession!!.sessionToken) // Show our playback controls in the compact notification view.
-                    .setShowActionsInCompactView(0, 1, 2)
-            ) // Set the Notification color
-            .setColor(resources.getColor(R.color.background_light)) // Set the large and small icons
-            .setLargeIcon(largeIcon)
-            .setSmallIcon(R.drawable.stat_sys_headset) // Set Notification content information
-            .setContentText(activeAudio!!.artist)
-            .setContentTitle(activeAudio!!.album)
-            .setContentInfo(activeAudio!!.title) // Add playback actions
-            .addAction(R.drawable.ic_media_previous, "previous", playbackAction(3))
-            .addAction(notificationAction, "pause", play_pauseAction)
-            .addAction(
-                R.drawable.ic_media_next,
-                "next",
-                playbackAction(2)
-            ) as NotificationCompat.Builder
+        setShowWhen(false) // Set the Notification style
+                .setStyle(
+                        androidx.media.app.NotificationCompat.MediaStyle() // Attach our MediaSession token
+                                .setMediaSession(mediaSession!!.sessionToken) // Show our playback controls in the compact notification view.
+                                .setShowActionsInCompactView(0, 1, 2)
+                ) // Set the Notification color
+                //.setColor(resources.getColor(R.color.background_light)) // Set the large and small icons
+                .setLargeIcon(largeIcon)
+                .setSmallIcon(R.drawable.stat_sys_headset) // Set Notification content information
+                .setContentText(activeSong!!.songName) // TODO: playlist name
+                .setContentTitle(activeSong!!.performer)
+                .setContentInfo(activeSong!!.songName) // Add playback actions
+                .addAction(R.drawable.ic_media_previous, "previous", playbackAction(3))
+                .addAction(notificationAction, "pause", play_pauseAction)
+                .addAction(
+                        R.drawable.ic_media_next,
+                        "next",
+                        playbackAction(2)
+                ) as NotificationCompat.Builder
+
+
+
+        if (activeSong!!.imageUrl != null)
+        {
+            var largeIcon = StorageUtil.bitmapFromUrl(activeSong!!.imageUrl!!)
+            largeIcon?.let {
+                notificationBuilder.setLargeIcon(it)
+            }
+        }
+
+//        notificationBuilder.
+//            setShowWhen(false) // Set the Notification style
+//            .setStyle(
+//                androidx.media.app.NotificationCompat.MediaStyle() // Attach our MediaSession token
+//                    .setMediaSession(mediaSession!!.sessionToken) // Show our playback controls in the compact notification view.
+//                    .setShowActionsInCompactView(0, 1, 2)
+//            ) // Set the Notification color
+//            .setColor(resources.getColor(R.color.background_light)) // Set the large and small icons
+//            .setLargeIcon(largeIcon)
+//            .setSmallIcon(R.drawable.stat_sys_headset) // Set Notification content information
+//            .setContentText(activeAudio!!.artist)
+//            .setContentTitle(activeAudio!!.album)
+//            .setContentInfo(activeAudio!!.title) // Add playback actions
+//            .addAction(R.drawable.ic_media_previous, "previous", playbackAction(3))
+//            .addAction(notificationAction, "pause", play_pauseAction)
+//            .addAction(
+//                R.drawable.ic_media_next,
+//                "next",
+//                playbackAction(2)
+//            ) as NotificationCompat.Builder
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(
             NOTIFICATION_ID,
             notificationBuilder.build()
@@ -308,27 +354,42 @@ class MediaPlayerService : Service(), OnCompletionListener,
         ) //replace with medias albumArt
         // Update the current metadata
         mediaSession!!.setMetadata(
-            MediaMetadataCompat.Builder()
-                .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, albumArt)
-                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, activeAudio!!.artist)
-                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, activeAudio!!.album)
-                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, activeAudio!!.title)
-                .build()
+                MediaMetadataCompat.Builder()
+                        .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, albumArt)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, activeSong!!.performer)
+                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, activeSong!!.songName)
+                        .build()
+//        mediaSession!!.setMetadata(
+//            MediaMetadataCompat.Builder()
+//                .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, albumArt)
+//                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, activeAudio!!.artist)
+//                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, activeAudio!!.album)
+//                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, activeAudio!!.title)
+//                .build()
         )
     }
 
     private fun skipToNext() {
-        if (audioIndex == audioList!!.size - 1) {
+//        if (audioIndex == audioList!!.size - 1) {
+//            //if last in playlist
+//            audioIndex = 0
+//            activeAudio = audioList!![audioIndex]
+//        } else {
+//            //get next in playlist
+//            activeAudio = audioList!![++audioIndex]
+//        }
+
+        if (songIndex == songList!!.size - 1) {
             //if last in playlist
-            audioIndex = 0
-            activeAudio = audioList!![audioIndex]
+            songIndex = 0
+            activeSong = songList!![songIndex]
         } else {
             //get next in playlist
-            activeAudio = audioList!![++audioIndex]
+            activeSong = songList!![++songIndex]
         }
 
         //Update stored index
-        StorageUtil(applicationContext).storeAudioIndex(audioIndex)
+        StorageUtil(applicationContext).storeSongIndex(songIndex)
         stopMedia()
         //reset mediaPlayer
         mediaPlayer!!.reset()
@@ -336,18 +397,29 @@ class MediaPlayerService : Service(), OnCompletionListener,
     }
 
     private fun skipToPrevious() {
-        if (audioIndex == 0) {
+//        if (audioIndex == 0) {
+//            //if first in playlist
+//            //set index to the last of audioList
+//            audioIndex = audioList!!.size - 1
+//            activeAudio = audioList!![audioIndex]
+//        } else {
+//            //get previous in playlist
+//            activeAudio = audioList!![--audioIndex]
+//        }
+
+        if (songIndex == 0) {
             //if first in playlist
             //set index to the last of audioList
-            audioIndex = audioList!!.size - 1
-            activeAudio = audioList!![audioIndex]
+            songIndex = songList!!.size - 1
+            activeSong = songList!![songIndex]
         } else {
             //get previous in playlist
-            activeAudio = audioList!![--audioIndex]
+            activeSong = songList!![--songIndex]
         }
 
         //Update stored index
-        StorageUtil(applicationContext).storeAudioIndex(audioIndex)
+//        StorageUtil(applicationContext).storeAudioIndex(audioIndex)
+        StorageUtil(applicationContext).storeSongIndex(songIndex)
         stopMedia()
         //reset mediaPlayer
         mediaPlayer!!.reset()
@@ -401,12 +473,30 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
     private val playNewAudio: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+//            //Get the new media index form SharedPreferences
+//            audioIndex = StorageUtil(applicationContext).loadAudioIndex()
+//            Log.d(TAG, "onReceive in playNewAudio BroadCast receiver. AudioIndex: $audioIndex")
+//            if (audioIndex != -1 && audioIndex < audioList!!.size) {
+//                //index is in a valid range
+//                activeAudio = audioList!![audioIndex]
+//            } else {
+//                stopSelf()
+//            }
+//
+//            //A PLAY_NEW_AUDIO action received
+//            //reset mediaPlayer to play the new Audio
+//            stopMedia()
+//            mediaPlayer!!.reset()
+//            initMediaPlayer()
+//            updateMetaData()
+//            buildNotification(PlaybackStatus.PLAYING)
             //Get the new media index form SharedPreferences
-            audioIndex = StorageUtil(applicationContext).loadAudioIndex()
-            Log.d(TAG, "onReceive in playNewAudio BroadCast receiver. AudioIndex: $audioIndex")
-            if (audioIndex != -1 && audioIndex < audioList!!.size) {
+
+            songIndex = StorageUtil(applicationContext).loadSongIndex()
+            Log.d(TAG, "onReceive in playNewAudio BroadCast receiver. SongIndex: $songIndex")
+            if (songIndex != -1 && songIndex < songList!!.size) {
                 //index is in a valid range
-                activeAudio = audioList!![audioIndex]
+                activeSong = songList!![songIndex]
             } else {
                 stopSelf()
             }
@@ -423,7 +513,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
     private fun register_playNewAudio() {
         //Register playNewMedia receiver
-        val filter = IntentFilter(NowPlayingActivity.Broadcast_PLAY_NEW_AUDIO)
+        val filter = IntentFilter(MainActivity.Broadcast_PLAY_NEW_AUDIO)
         registerReceiver(playNewAudio, filter)
     }
 
@@ -455,7 +545,8 @@ class MediaPlayerService : Service(), OnCompletionListener,
         mediaPlayer!!.setAudioStreamType(AudioManager.STREAM_MUSIC)
         try {
             // Set the data source to the mediaFile location
-            mediaPlayer!!.setDataSource(activeAudio!!.data);
+            //mediaPlayer!!.setDataSource(activeAudio!!.data);
+            mediaPlayer!!.setDataSource(activeSong!!.songUrl);
         } catch (e: IOException) {
             e.printStackTrace()
             stopSelf()
@@ -507,7 +598,8 @@ class MediaPlayerService : Service(), OnCompletionListener,
         Log.d(TAG, "Media player on completion")
         stopMedia();
         //stop the service
-        stopSelf();
+        stopSelf()
+        // TODO: play next song
     }
 
     //Handle errors

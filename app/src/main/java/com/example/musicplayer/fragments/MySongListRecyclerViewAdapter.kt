@@ -7,8 +7,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
 import com.example.musicplayer.R
+import com.example.musicplayer.database.Likes
 import com.example.musicplayer.database.Song
 
 import com.example.musicplayer.fragments.dummy.DummyContent.DummyItem
@@ -20,7 +22,10 @@ import com.example.musicplayer.fragments.dummy.DummyContent.DummyItem
 class MySongListRecyclerViewAdapter(
         private var context: Context,
         private var data: List<Song>,
-        private var listener: OnSongListItemClickListener
+        private var listener: OnSongListItemClickListener,
+        //private var likes: Likes
+        private var likes: HashMap<String, Boolean> = HashMap<String, Boolean>()
+
 ) : RecyclerView.Adapter<MySongListRecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -54,17 +59,48 @@ class MySongListRecyclerViewAdapter(
         notifyDataSetChanged()
     }
 
+    fun setData(songs: List<Song>, likes: Likes){
+        data = songs
+        if (likes.songs != null) {
+            this.likes = HashMap<String, Boolean>(likes.songs!!)
+        }
+        else{
+            this.likes = HashMap<String, Boolean>()
+        }
+        notifyDataSetChanged()
+    }
+
+    fun setLikes(likes: Likes){
+        if (likes.songs != null) {
+            this.likes = HashMap<String, Boolean>(likes.songs!!)
+        }
+        else{
+            this.likes = HashMap<String, Boolean>()
+        }
+        notifyDataSetChanged()
+    }
+
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val songIcon: ImageView = view.findViewById(R.id.song_icon)
         val songName: TextView = view.findViewById(R.id.song_name)
         val performer: TextView = view.findViewById(R.id.song_performer)
-        val duration: TextView = view.findViewById(R.id.song_duration)
+        //val duration: TextView = view.findViewById(R.id.song_duration)
+        val likeIcon: ImageView = view.findViewById(R.id.like_icon)
 
 
         fun bind(song: Song, listener: OnSongListItemClickListener)
         {
             songName.text = song.songName
             performer.text = song.performer
+
+            if (likes.containsKey(song.id)){
+                //liked
+                likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.like_red))
+            }
+            else {
+                // not liked
+                likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.like))
+            }
 
             song.imageUrl?.let {
                 Glide.with(context)
@@ -73,16 +109,33 @@ class MySongListRecyclerViewAdapter(
             }
 
             this.itemView.setOnClickListener {
-                listener.onSongListItemClicked(song)
-            }
-        }
+                //listener.onSongListItemClicked(song)
 
-        override fun toString(): String {
-            return super.toString()
+
+
+                val pos: Int = data.indexOf(song)
+                listener.playSongs(pos, data)
+            }
+
+            this.likeIcon.setOnClickListener {
+                if (likes.containsKey(song.id))
+                {
+                    likes.remove(song.id)
+                    likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.like))
+                    //unlike song
+                }
+                else{
+                    likes[song.id] = true
+                    likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.like_red))
+                }
+                listener.onSongLiked(song, likes)
+            }
         }
     }
 
     interface OnSongListItemClickListener{
         fun onSongListItemClicked(song: Song)
+        fun onSongLiked(song: Song, likes: HashMap<String, Boolean>)
+        fun playSongs(pos: Int, data: List<Song>)
     }
 }

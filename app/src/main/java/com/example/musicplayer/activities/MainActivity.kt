@@ -4,7 +4,9 @@ import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.res.Resources
 import android.database.Cursor
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
@@ -15,13 +17,22 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.widget.Button
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.menu.MenuBuilder
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.musicplayer.R
+import com.example.musicplayer.database.AppDatabase
+import com.example.musicplayer.database.Playlist
+import com.example.musicplayer.database.Song
 import com.example.musicplayer.firebase.FirebaseConsts
 import com.example.musicplayer.firebase.SongsFirebase
 import com.example.musicplayer.fragments.BlankFragment
@@ -31,6 +42,13 @@ import com.example.musicplayer.fragments.SongListFragment
 import com.example.musicplayer.player.Audio
 import com.example.musicplayer.player.MediaPlayerService
 import com.example.musicplayer.player.StorageUtil
+import com.example.musicplayer.repositories.SongsRepository
+import com.example.musicplayer.view_models.MainActivityViewModel
+import com.example.musicplayer.view_models.MainActivityViewModelFactory
+import com.example.musicplayer.view_models.NowPlayingViewModel
+import com.example.musicplayer.view_models.NowPlayingViewModelFactory
+import com.example.musicplayer.workers.UpdatePlaylistWorker
+import com.example.musicplayer.workers.UpdateSongsWorker
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -41,21 +59,30 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 
-class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
+class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener, SongListFragment.SongItemClickListener,
+        PlaylistListFragment.PlaylistItemClickListener {
     private val TAG = "MainActivity2"
 
-    lateinit var mAuth: FirebaseAuth
-    lateinit var firebaseDatabase: FirebaseDatabase
-    lateinit var firebaseStorage: FirebaseStorage
-    lateinit var currentUser: FirebaseUser
-    lateinit var viewPager: ViewPager2
-    lateinit var pagesAdapter: ScreenSlidePagerAdapter
-    lateinit var bottomNavigation: BottomNavigationView
+
+    private lateinit var viewModel: MainActivityViewModel
+    private lateinit var mAuth: FirebaseAuth
+    private lateinit var firebaseDatabase: FirebaseDatabase
+    private lateinit var firebaseStorage: FirebaseStorage
+    private lateinit var mDatabase: AppDatabase
+    private lateinit var repository: SongsRepository
+    private lateinit var currentUser: FirebaseUser
+    private lateinit var viewPager: ViewPager2
+    private  lateinit var pagesAdapter: ScreenSlidePagerAdapter
+    private lateinit var bottomNavigation: BottomNavigationView
 
     // Music player service
     private var player: MediaPlayerService? = null
     private var serviceBound = false
     var audioList: ArrayList<Audio>? = null
+    private val songList: ArrayList<Song> = ArrayList()
+    companion object{
+        const val Broadcast_PLAY_NEW_AUDIO = "com.example.musicplayer.activities.PlayNewAudio"
+    }
     //Binding this Client to the AudioPlayer Service
     private val serviceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
@@ -80,42 +107,25 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.my_toolbar))
 
+
+
+
         //(application as MyApplication).appComponent.inject(this)
         firebaseDatabase = FirebaseDatabase.getInstance()
         firebaseStorage = FirebaseStorage.getInstance()
+        mDatabase = AppDatabase.getDatabase(this)
+        repository = SongsRepository(mDatabase.songDao(), mDatabase.likesDao(), SongsFirebase(firebaseDatabase, firebaseStorage))
         mAuth = FirebaseAuth.getInstance()
 
-        val songsFirebase = SongsFirebase(firebaseDatabase, firebaseStorage)
+        viewModel = ViewModelProvider(this, MainActivityViewModelFactory(repository))
+                .get(MainActivityViewModel::class.java)
+
 
 
         initViews()
-
-        loadAudio();
+        scheduleTasks()
+        //loadAudio()
         //play the first audio in the ArrayList
-
-
-
-
-        // firebase loading songs
-//        val path = FirebaseConsts.songsRef
-//        val maybe: Maybe<MutableList<Song>> = songsFirebase.readSongs(path)
-//        val disposable = maybe.subscribe({
-//                // onSuccess
-//                Log.d(TAG, "onSuccess")
-//                for (song: Song? in it){
-//                    Log.d(TAG, "$song")
-//                }
-//            },
-//            {
-//                // onError
-//                Log.d(TAG, "onError")
-//                Log.d(TAG, it.message)
-//                it.printStackTrace()
-//            },
-//            {
-//                // onComplete
-//                Log.d(TAG, "onComplete")
-//            })
 
 
 //        // SnackBar example
@@ -156,25 +166,40 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
     }
 
     private fun initViews() {
+        supportActionBar!!.setBackgroundDrawable(ColorDrawable(resources.getColor(R.color.my_black)))
         viewPager = findViewById(R.id.view_pager)
         bottomNavigation = findViewById(R.id.bottom_navigation)
         setupViewPager()
         setupBottomNavigation()
-        findViewById<Button>(R.id.load_songs_button).setOnClickListener {
-//            GlobalScope.launch {
-//                val songs = songsFirebase.readSongsUsingCoroutines(FirebaseConsts.songsDatabaseRef)
-////                songs?.let {
-////                    for (song in it)
-////                        Log.d(TAG, "$song")
-////                }
-//            }
-            audioList?.let{
-                playAudio(1)
-            }
+    }
 
-//            val intent = Intent(this@MainActivity, NowPlayingActivity::class.java)
-//            startActivity(intent)
-        }
+    private fun scheduleTasks() {
+        var workManager = WorkManager.getInstance(this)
+
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+
+        val uploadSongsWorkRequest = OneTimeWorkRequestBuilder<UpdateSongsWorker>()
+            .setConstraints(constraints)
+            .build()
+
+        val uploadPlaylistsWorkRequest = OneTimeWorkRequestBuilder<UpdatePlaylistWorker>()
+            .setConstraints(constraints)
+            .build()
+
+//        val uploadSongsWorkRequest = PeriodicWorkRequestBuilder<UpdateSongsWorker>(24, TimeUnit.DAYS)
+//            .setConstraints(constraints)
+//            .build()
+
+        workManager.enqueue(uploadSongsWorkRequest)
+        workManager.enqueue(uploadPlaylistsWorkRequest)
+        //UpdateSongsIntentService.startActionUpdateSongs(applicationContext, "param1", "param2")
+
+//        appComponent = DaggerApplicationComponent
+//                .builder()
+//                .build()
     }
 
     override fun onStart() {
@@ -215,20 +240,26 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
     }
 
     inner class ScreenSlidePagerAdapter(activity: MainActivity) : FragmentStateAdapter(activity) {
-        override fun getItemCount(): Int = 3
+        override fun getItemCount(): Int = 4
 
 
         override fun createFragment(position: Int): Fragment =
             when (position)
             {
                 0 -> {
-                    ScrollingFragment()
+                    PlaylistListFragment()
                 }
                 1 -> {
                     PlaylistListFragment()
                 }
                 2 -> {
-                    SongListFragment()
+//                    0 -> AllSongs()
+//                    1 -> PlaylistSongs()
+//                    2 -> LikedSongs()
+                    SongListFragment.newInstance(1, 2)
+                }
+                3 -> {
+                    SongListFragment.newInstance(1, 0)
                 }
                 else -> BlankFragment()
             }
@@ -244,10 +275,11 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
                 //Toast.makeText(this@MainActivity, "Position: $position", Toast.LENGTH_SHORT).show()
 
                 val item_id = when (position) {
-                    0 -> R.id.scrolling_menu_item
+                    0 -> R.id.shared_playlists_menu_item
                     1 -> R.id.playlists_menu_item
-                    2 -> R.id.songs_menu_item
-                    else -> R.id.scrolling_menu_item
+                    2 -> R.id.liked_menu_item
+                    3 -> R.id.songs_menu_item
+                    else -> R.id.shared_playlists_menu_item
                 }
                 bottomNavigation.selectedItemId = item_id
             }
@@ -258,7 +290,7 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
     private fun setupBottomNavigation(){
         val bottomNavigationListener = BottomNavigationView.OnNavigationItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.scrolling_menu_item -> {
+                R.id.shared_playlists_menu_item -> {
                     viewPager.currentItem = 0
                     return@OnNavigationItemSelectedListener true
                 }
@@ -266,8 +298,12 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
                     viewPager.currentItem = 1
                     return@OnNavigationItemSelectedListener true
                 }
-                R.id.songs_menu_item -> {
+                R.id.liked_menu_item -> {
                     viewPager.currentItem = 2
+                    return@OnNavigationItemSelectedListener true
+                }
+                R.id.songs_menu_item -> {
+                    viewPager.currentItem = 3
                     return@OnNavigationItemSelectedListener true
                 }
             }
@@ -300,6 +336,12 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
                 startActivity(intent)
                 true
             }
+            R.id.action_sign_out -> {
+                Toast.makeText(this, "Sign out", Toast.LENGTH_SHORT).show()
+                mAuth.signOut()
+                finish()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -323,6 +365,28 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
         }
     }
 
+    private fun playSong(songIndex: Int) {
+        //Check is service is active
+        if (!serviceBound) {
+            //Store Serializable audioList to SharedPreferences
+            val storage = StorageUtil(applicationContext)
+            storage.storeSong(songList)
+            storage.storeSongIndex(songIndex)
+            val playerIntent = Intent(this, MediaPlayerService::class.java)
+            startService(playerIntent)
+            bindService(playerIntent, serviceConnection, BIND_AUTO_CREATE)
+        } else {
+            //Store the new audioIndex to SharedPreferences
+            val storage = StorageUtil(applicationContext)
+            storage.storeSongIndex(songIndex)
+
+            //Service is active
+            //Send a broadcast to the service -> PLAY_NEW_AUDIO
+            val broadcastIntent = Intent(Broadcast_PLAY_NEW_AUDIO)
+            sendBroadcast(broadcastIntent)
+        }
+    }
+
     private fun playAudio(audioIndex: Int) {
         //Check is service is active
         if (!serviceBound) {
@@ -340,7 +404,7 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
 
             //Service is active
             //Send a broadcast to the service -> PLAY_NEW_AUDIO
-            val broadcastIntent = Intent(NowPlayingActivity.Broadcast_PLAY_NEW_AUDIO)
+            val broadcastIntent = Intent(Broadcast_PLAY_NEW_AUDIO)
             sendBroadcast(broadcastIntent)
         }
     }
@@ -364,5 +428,43 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener {
             }
         }
         cursor?.close()
+    }
+
+    override fun songItemClick(song: Song) {
+        songList.add(song)
+    }
+
+    override fun playSong(pos: Int, songs: List<Song>) {
+        //Check is service is active
+        if (!serviceBound) {
+            //Store Serializable audioList to SharedPreferences
+            val storage = StorageUtil(applicationContext)
+            storage.storeSong(ArrayList(songs))
+            storage.storeSongIndex(pos)
+            val playerIntent = Intent(this, MediaPlayerService::class.java)
+            startService(playerIntent)
+            bindService(playerIntent, serviceConnection, BIND_AUTO_CREATE)
+        } else {
+            //Store the new audioIndex to SharedPreferences
+            val storage = StorageUtil(applicationContext)
+            storage.storeSong(ArrayList(songs))
+            storage.storeSongIndex(pos)
+
+            //Service is active
+            //Send a broadcast to the service -> PLAY_NEW_AUDIO
+            val broadcastIntent = Intent(Broadcast_PLAY_NEW_AUDIO)
+            sendBroadcast(broadcastIntent)
+        }
+    }
+
+    override fun playlistItemClick(playlist: Playlist) {
+        viewModel.playlist.value = playlist
+        openPlaylistActivity(playlist.id)
+    }
+
+    private fun openPlaylistActivity(playlistId: String){
+        intent = Intent(this, PlaylistSongsActivity::class.java)
+        intent.putExtra(SongListFragment.ARG_PLAYLIST, playlistId)
+        startActivity(intent)
     }
 }

@@ -18,10 +18,10 @@ class CreatePlaylistViewModel(private val repository: PlaylistRepository): ViewM
     val imagePath = MutableLiveData<String>()
     val isFileSelected = MutableLiveData<Boolean>()
 
-    fun uploadPlaylist(playlist: Playlist) {
+    fun uploadPlaylist(playlist: Playlist, isShared: Boolean) {
         GlobalScope.launch(Dispatchers.IO) {
             playlist.imagePath = imagePath.value
-            repository.playlistsFirebase.uploadPlaylist(playlist)
+            repository.playlistsFirebase.uploadPlaylist(playlist, isShared)
         }
 
 

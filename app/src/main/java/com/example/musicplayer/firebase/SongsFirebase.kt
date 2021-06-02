@@ -2,24 +2,12 @@ package com.example.musicplayer.firebase
 
 import android.net.Uri
 import android.util.Log
-import com.example.musicplayer.database.Playlist
+import com.example.musicplayer.database.Likes
 import com.example.musicplayer.database.Song
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
-import durdinapps.rxfirebase2.DataSnapshotMapper
-import durdinapps.rxfirebase2.RxFirebaseDatabase
-import io.reactivex.Maybe
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.schedulers.Schedulers
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import java.io.File
-import kotlin.coroutines.suspendCoroutine
 
 class SongsFirebase(private val mDatabase: FirebaseDatabase, private val mStorage: FirebaseStorage) {
     private val TAG = "SongsFirebase"
@@ -109,4 +97,36 @@ class SongsFirebase(private val mDatabase: FirebaseDatabase, private val mStorag
         song.songUrl = url
         return url
     }
+
+    // songId: true
+    suspend fun loadLikes(path: String): Likes {
+        // TODO: deal with no likes
+
+        val reference = mDatabase.reference.child(path)
+        val snapshot = reference.get().await()
+        snapshot?: return Likes()
+
+
+        val likes = snapshot.getValue(Likes::class.java)
+
+
+//        Log.d(TAG, "Count: ${map!!.keys.size}")
+
+        likes?.id = snapshot.key?:""
+        Log.d(TAG, "Likes: $likes")
+
+        if (likes == null){
+           return Likes()
+        }
+
+        Log.d(TAG, "Count: ${likes.songs?.keys?.size}")
+        return likes
+    }
+
+    fun uploadLikes(likes: HashMap<String, Boolean>, path: String) {
+        val myLikes: Likes = Likes("qwerty", likes)
+        val reference = mDatabase.reference.child(path)
+        reference.setValue(myLikes)
+    }
+
 }

@@ -27,6 +27,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_create_playlist_header" />
 
+    <CheckBox
+        android:id="@+id/share_checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Share"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/et_create_playlist_name"
+        app:layout_constraintTop_toTopOf="@+id/et_create_playlist_name" />
+
     <ImageView
         android:id="@+id/iv_create_playlist_image"
         android:layout_width="400dp"

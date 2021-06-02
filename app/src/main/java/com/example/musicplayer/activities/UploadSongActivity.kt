@@ -81,7 +81,7 @@ class UploadSongActivity : AppCompatActivity() {
         firebaseDatabase = FirebaseDatabase.getInstance()
         firebaseStorage = FirebaseStorage.getInstance()
         mDatabase = AppDatabase.getDatabase(this)
-        repository = SongsRepository(mDatabase.songDao(), SongsFirebase(firebaseDatabase, firebaseStorage))
+        repository = SongsRepository(mDatabase.songDao(), mDatabase.likesDao(), SongsFirebase(firebaseDatabase, firebaseStorage))
     }
 
     private fun initViews() {

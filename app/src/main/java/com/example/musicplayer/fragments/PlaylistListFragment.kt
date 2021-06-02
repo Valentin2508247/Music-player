@@ -1,5 +1,6 @@
 package com.example.musicplayer.fragments
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -10,18 +11,12 @@ import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.lifecycle.ViewModelProvider
 import com.example.musicplayer.R
-import com.example.musicplayer.activities.PlaylistActivity
 import com.example.musicplayer.database.AppDatabase
 import com.example.musicplayer.database.Playlist
-import com.example.musicplayer.database.Song
 import com.example.musicplayer.firebase.PlaylistsFirebase
-import com.example.musicplayer.firebase.SongsFirebase
-import com.example.musicplayer.fragments.dummy.DummyContent
 import com.example.musicplayer.repositories.PlaylistRepository
-import com.example.musicplayer.repositories.SongsRepository
 import com.example.musicplayer.view_models.PlaylistsViewModel
 import com.example.musicplayer.view_models.PlaylistsViewModelFactory
 import com.google.firebase.database.FirebaseDatabase
@@ -35,6 +30,7 @@ class PlaylistListFragment : Fragment() {
 
     private var columnCount = 1
     private lateinit var playlstsAdapter: MyPlaylistRecyclerViewAdapter
+    private lateinit var listener: PlaylistItemClickListener
 
     private lateinit var viewModel: PlaylistsViewModel
     private lateinit var repository: PlaylistRepository
@@ -79,10 +75,11 @@ class PlaylistListFragment : Fragment() {
         val listItemClickListener = object : MyPlaylistRecyclerViewAdapter.OnPlaylistListItemClickListener{
             override fun onPlaylistItemClicked(playlist: Playlist) {
                 Log.d(TAG, "$playlist")
-                Toast.makeText(context, playlist.songs?.keys.toString(), Toast.LENGTH_LONG).show()
-                val intent = Intent(context, PlaylistActivity::class.java)
-                intent.putExtra(getString(R.string.intent_playlist_key), playlist)
-                startActivity(intent)
+                //Toast.makeText(context, playlist.songs?.keys.toString(), Toast.LENGTH_LONG).show()
+                listener.playlistItemClick(playlist)
+//                val intent = Intent(context, PlaylistActivity::class.java)
+//                intent.putExtra(getString(R.string.intent_playlist_key), playlist)
+//                startActivity(intent)
             }
         }
 
@@ -118,5 +115,18 @@ class PlaylistListFragment : Fragment() {
     override fun onStart() {
         super.onStart()
         Log.d(TAG, "onStart")
+    }
+
+    interface PlaylistItemClickListener{
+        fun playlistItemClick(playlist: Playlist)
+    }
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        try {
+            listener = context as PlaylistItemClickListener
+        } catch (castException: ClassCastException) {
+            /** The activity does not implement the listener.  */
+        }
     }
 }

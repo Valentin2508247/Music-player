@@ -4,6 +4,8 @@ class FirebaseConsts {
     companion object{
         const val songsDatabaseRef: String = "songs"
         const val playlistsDatabaseRef: String = "publicPlaylists"
+        const val privatePlaylistsDatabaseRef: String = "playlists"
+        const val likesDatabaseRef: String = "likes"
 
         const val songIconStorage: String = "images"
         const val songMusicStorage: String = "music"

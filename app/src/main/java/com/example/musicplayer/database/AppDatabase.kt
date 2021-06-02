@@ -6,12 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [Code::class, Song::class, Playlist::class], version = 8)
+@Database(entities = [Code::class, Song::class, Playlist::class, Likes::class], version = 13)
 @TypeConverters(MyTypeConverter::class)
 abstract class AppDatabase: RoomDatabase() {
     abstract fun codeDao(): CodeDao
     abstract fun songDao(): SongDao
     abstract fun playlistDao(): PlaylistDao
+    abstract fun likesDao(): LikesDao
 
     companion object {
         // Singleton prevents multiple instances of database opening at the

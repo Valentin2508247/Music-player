@@ -11,5 +11,10 @@
         android:icon="@drawable/baseline_add_white_24"
         android:orderInCategory="2"
         android:title="Create playlist"/>
+    <item
+        android:id="@+id/action_sign_out"
+        android:icon="@drawable/outline_logout_white_24"
+        android:orderInCategory="2"
+        android:title="Sign out"/>
 
 </menu>
