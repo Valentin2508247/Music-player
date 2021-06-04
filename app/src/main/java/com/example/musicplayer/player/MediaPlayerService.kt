@@ -25,10 +25,15 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import com.example.musicplayer.activities.MainActivity
 import com.example.musicplayer.database.Song
+import com.example.musicplayer.firebase.FirebaseConsts
+import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import java.io.IOException
 
 
@@ -99,6 +104,11 @@ class MediaPlayerService : Service(), OnCompletionListener,
             } else {
                 stopSelf()
             }
+
+//            if (activeSong == null){
+//                Toast.makeText(this, "Songs have not been loaded yet", Toast.LENGTH_LONG).show()
+//                stopSelf()
+//            }
 
         } catch (e: java.lang.NullPointerException) {
             stopSelf()
@@ -546,10 +556,32 @@ class MediaPlayerService : Service(), OnCompletionListener,
         try {
             // Set the data source to the mediaFile location
             //mediaPlayer!!.setDataSource(activeAudio!!.data);
-            mediaPlayer!!.setDataSource(activeSong!!.songUrl);
+            mediaPlayer!!.setDataSource(activeSong!!.songUrl)
         } catch (e: IOException) {
             e.printStackTrace()
             stopSelf()
+        } catch (e: NullPointerException){
+            Toast.makeText(this, "Songs have not been loaded yet", Toast.LENGTH_LONG).show()
+            stopSelf()
+            return
+
+//            if (activeSong == null){
+//                Log.d(TAG, "Active song is null")
+//                e.printStackTrace()
+//                stopSelf()
+//            }
+//            else {
+//                //activeSong.songUrl =
+//                runBlocking {
+//                    //val path = "${FirebaseConsts.songMusicStorage}/${activeSong!!.songPath}"
+//                    Log.d(TAG, activeSong!!.songPath)
+//                    val reference = FirebaseStorage.getInstance().reference.child("${FirebaseConsts.songMusicStorage}/${activeSong!!.songPath}")
+//                    val url = reference.downloadUrl.await().toString()
+//                    //Log.d(TAG, "Url: $url")
+//                    activeSong!!.songUrl = url
+//                    mediaPlayer!!.setDataSource(activeSong!!.songUrl)
+//                }
+//            }
         }
         mediaPlayer!!.prepareAsync()
     }
@@ -597,9 +629,10 @@ class MediaPlayerService : Service(), OnCompletionListener,
         //Invoked when playback of a media source has completed.
         Log.d(TAG, "Media player on completion")
         stopMedia();
-        //stop the service
-        stopSelf()
-        // TODO: play next song
+
+        //stopSelf()
+        skipToNext()
+    // TODO: play next song
     }
 
     //Handle errors

@@ -13,12 +13,6 @@ import com.example.musicplayer.R
 import com.example.musicplayer.database.Likes
 import com.example.musicplayer.database.Song
 
-import com.example.musicplayer.fragments.dummy.DummyContent.DummyItem
-
-/**
- * [RecyclerView.Adapter] that can display a [DummyItem].
- * TODO: Replace the implementation with code for your data type.
- */
 class MySongListRecyclerViewAdapter(
         private var context: Context,
         private var data: List<Song>,

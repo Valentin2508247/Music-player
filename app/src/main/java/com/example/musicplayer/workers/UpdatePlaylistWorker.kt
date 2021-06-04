@@ -8,6 +8,7 @@ import com.example.musicplayer.database.AppDatabase
 import com.example.musicplayer.firebase.FirebaseConsts
 import com.example.musicplayer.firebase.PlaylistsFirebase
 import com.example.musicplayer.repositories.PlaylistRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.GlobalScope
@@ -42,14 +43,18 @@ class UpdatePlaylistWorker(private val appContext: Context, workerParams: Worker
     }
 
     private fun updatePlaylists(){
-        GlobalScope.launch {
-            val playlists = repository.playlistsFirebase.readPlaylistsUsingCoroutines(FirebaseConsts.playlistsDatabaseRef)
-            playlists?.let{
-                Log.d(TAG, "Deleting all playlists")
-                repository.playlistDao.deleteAllPlaylists()
-                Log.d(TAG, "Inserting playlists")
-                repository.playlistDao.insertAllPlaylists(playlists)
-                Log.d(TAG, "Count: ${it.size}")
+
+        val user = FirebaseAuth.getInstance().currentUser
+        user?.let {
+            GlobalScope.launch {
+                val playlists = repository.playlistsFirebase.readPlaylistsUsingCoroutines(FirebaseConsts.playlistsDatabaseRef)
+                playlists?.let{
+                    Log.d(TAG, "Deleting all playlists")
+                    repository.playlistDao.deleteAllPlaylists()
+                    Log.d(TAG, "Inserting playlists")
+                    repository.playlistDao.insertAllPlaylists(playlists)
+                    Log.d(TAG, "Count: ${it.size}")
+                }
             }
         }
     }

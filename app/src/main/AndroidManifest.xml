@@ -21,8 +21,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MusicPlayer">
-        <activity android:name=".activities.AddSongsToPlaylistActivity"></activity>
+        <activity android:name=".activities.AddSongsToPlaylistActivity"/>
         <activity android:name=".activities.PlaylistSongsActivity" />
+
 
         <service
             android:name=".player.MediaPlayerService"
@@ -30,17 +31,18 @@
             android:exported="true" />
 
         <activity android:name=".activities.SignUpActivity" />
-        <activity android:name=".activities.LoginActivity" />
-        <activity android:name=".activities.CreatePlaylistActivity" />
-        <activity android:name=".activities.UploadSongActivity" />
-        <activity
-            android:name=".activities.MainActivity"
-            android:theme="@style/Theme.MusicPlayer.NoActionBar">
+        <activity android:name=".activities.LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity android:name=".activities.CreatePlaylistActivity" />
+        <activity android:name=".activities.UploadSongActivity" />
+        <activity
+            android:name=".activities.MainActivity"
+            android:theme="@style/Theme.MusicPlayer.NoActionBar">
         </activity>
     </application>
 

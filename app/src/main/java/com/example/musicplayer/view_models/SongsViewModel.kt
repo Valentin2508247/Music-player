@@ -16,7 +16,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
-class SongsViewModel(private val repository: SongsRepository, private val playlistId: String?, private val songsSource: SongsSource, playlistRepository: PlaylistRepository): ViewModel() {
+class SongsViewModel(private val repository: SongsRepository, playlistId: String?, songsSource: SongsSource, playlistRepository: PlaylistRepository): ViewModel() {
     private val TAG: String = "SongsViewModel"
 
     lateinit var likesLiveData: LiveData<Likes>

@@ -57,12 +57,14 @@ class UpdateSongsWorker(private val appContext: Context, workerParams: WorkerPar
     private fun updateLikes(){
         GlobalScope.launch {
             val user = FirebaseAuth.getInstance().currentUser
-            val userId = user.uid
-            val likes = repository.songsFirebase.loadLikes("${FirebaseConsts.likesDatabaseRef}/${userId}")
-            likes?.let {
-                Log.d(TAG, "Update likes. Count: ${it.songs!!.size}")
-                repository.likesDao.deleteLikes()
-                repository.likesDao.insertLikes(it)
+            user?.let {
+                val userId = user.uid
+                val likes = repository.songsFirebase.loadLikes("${FirebaseConsts.likesDatabaseRef}/${userId}")
+                likes?.let {
+                    Log.d(TAG, "Update likes. Count: ${it.songs!!.size}")
+                    repository.likesDao.deleteLikes()
+                    repository.likesDao.insertLikes(it)
+                }
             }
         }
     }

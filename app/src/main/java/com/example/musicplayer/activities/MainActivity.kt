@@ -4,7 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
-import android.content.res.Resources
+import android.content.pm.ActivityInfo
 import android.database.Cursor
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
@@ -15,9 +15,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
-import android.widget.Button
 import android.widget.Toast
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.menu.MenuBuilder
 import androidx.appcompat.widget.PopupMenu
@@ -33,11 +31,8 @@ import com.example.musicplayer.R
 import com.example.musicplayer.database.AppDatabase
 import com.example.musicplayer.database.Playlist
 import com.example.musicplayer.database.Song
-import com.example.musicplayer.firebase.FirebaseConsts
 import com.example.musicplayer.firebase.SongsFirebase
-import com.example.musicplayer.fragments.BlankFragment
 import com.example.musicplayer.fragments.PlaylistListFragment
-import com.example.musicplayer.fragments.ScrollingFragment
 import com.example.musicplayer.fragments.SongListFragment
 import com.example.musicplayer.player.Audio
 import com.example.musicplayer.player.MediaPlayerService
@@ -45,8 +40,6 @@ import com.example.musicplayer.player.StorageUtil
 import com.example.musicplayer.repositories.SongsRepository
 import com.example.musicplayer.view_models.MainActivityViewModel
 import com.example.musicplayer.view_models.MainActivityViewModelFactory
-import com.example.musicplayer.view_models.NowPlayingViewModel
-import com.example.musicplayer.view_models.NowPlayingViewModelFactory
 import com.example.musicplayer.workers.UpdatePlaylistWorker
 import com.example.musicplayer.workers.UpdateSongsWorker
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -54,9 +47,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 
 class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener, SongListFragment.SongItemClickListener,
@@ -107,7 +97,7 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener, Son
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.my_toolbar))
 
-
+        Log.d(TAG, "Main activity onCreate")
 
 
         //(application as MyApplication).appComponent.inject(this)
@@ -166,6 +156,8 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener, Son
     }
 
     private fun initViews() {
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+
         supportActionBar!!.setBackgroundDrawable(ColorDrawable(resources.getColor(R.color.my_black)))
         viewPager = findViewById(R.id.view_pager)
         bottomNavigation = findViewById(R.id.bottom_navigation)
@@ -205,6 +197,7 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener, Son
     override fun onStart() {
         super.onStart()
 
+        Log.d(TAG, "Main activity onStart")
         if (mAuth.currentUser != null){
             currentUser = mAuth.currentUser
         }
@@ -261,7 +254,7 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener, Son
                 3 -> {
                     SongListFragment.newInstance(1, 0)
                 }
-                else -> BlankFragment()
+                else -> PlaylistListFragment()
             }
     }
 
@@ -436,6 +429,8 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener, Son
 
     override fun playSong(pos: Int, songs: List<Song>) {
         //Check is service is active
+
+
         if (!serviceBound) {
             //Store Serializable audioList to SharedPreferences
             val storage = StorageUtil(applicationContext)
@@ -447,6 +442,7 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener, Son
         } else {
             //Store the new audioIndex to SharedPreferences
             val storage = StorageUtil(applicationContext)
+            storage.clearCachedSongPlaylist()
             storage.storeSong(ArrayList(songs))
             storage.storeSongIndex(pos)
 
