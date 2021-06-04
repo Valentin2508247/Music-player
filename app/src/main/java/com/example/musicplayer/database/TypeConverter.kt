@@ -8,6 +8,8 @@ class MyTypeConverter {
     fun fromString(value: String?): Map<String, Boolean> {
         val map = HashMap<String, Boolean>()
         value?.let {
+            if (value == "")
+                return map
             val str = value.substring(0, value.length - 1)
             for (name: String in str.split("|"))
                 map[name] = true
@@ -16,7 +18,9 @@ class MyTypeConverter {
     }
 
     @TypeConverter //[songId: true, ...]
-    fun toString(map: Map<String, Boolean>): String {
+    fun toString(map: Map<String, Boolean>?): String {
+        if (map == null)
+            return ""
         var sb = StringBuilder()
         for ((k, _) in map){
             sb.append(k)

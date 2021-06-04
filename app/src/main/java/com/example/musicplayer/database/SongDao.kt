@@ -9,6 +9,12 @@ interface SongDao {
     @Query("Select * from song")
     fun getAllSongs(): LiveData<List<Song>>
 
+    @Query("Select * from song")
+    fun getSongs(): List<Song>
+
+    @Query("Select * from song where id in (:ids)")
+    fun getSongsByIds(ids: List<String>): LiveData<List<Song>>
+
     @Query("Select * from song where id = :id")
     fun getSong(id: String): Song
 
@@ -24,4 +30,14 @@ interface SongDao {
     @Delete
     fun deleteSong(song: Song)
 
+//    // can't return LiveData from transaction
+//    @Transaction
+//    fun getLikedSongs(): LiveData<List<Song>>{
+//        val likes = getLikes()
+//        val list = likes.songs!!.keys.toList()
+//        return getSongsByIds(list)
+//    }
+//
+    @Query("Select * from likes")
+    fun getLikes(): Likes
 }

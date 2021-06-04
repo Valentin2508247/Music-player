@@ -1,5 +1,7 @@
 package com.example.musicplayer.fragments
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -11,11 +13,14 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.ViewModelProvider
 import com.example.musicplayer.R
+import com.example.musicplayer.database.AppDatabase
 import com.example.musicplayer.database.Playlist
-import com.example.musicplayer.fragments.dummy.DummyContent
+import com.example.musicplayer.firebase.PlaylistsFirebase
 import com.example.musicplayer.repositories.PlaylistRepository
 import com.example.musicplayer.view_models.PlaylistsViewModel
 import com.example.musicplayer.view_models.PlaylistsViewModelFactory
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.storage.FirebaseStorage
 
 /**
  * A fragment representing a list of Items.
@@ -24,9 +29,14 @@ class PlaylistListFragment : Fragment() {
     private val TAG = "PlaylistListFragment"
 
     private var columnCount = 1
+    private lateinit var playlstsAdapter: MyPlaylistRecyclerViewAdapter
+    private lateinit var listener: PlaylistItemClickListener
 
     private lateinit var viewModel: PlaylistsViewModel
     private lateinit var repository: PlaylistRepository
+    private lateinit var firebaseDatabase: FirebaseDatabase
+    private lateinit var firebaseStorage: FirebaseStorage
+    private lateinit var mDatabase: AppDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,9 +49,20 @@ class PlaylistListFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        repository = PlaylistRepository()
+        val context = requireContext()
+
+        firebaseDatabase = FirebaseDatabase.getInstance()
+        firebaseStorage = FirebaseStorage.getInstance()
+        mDatabase = AppDatabase.getDatabase(context)
+        repository = PlaylistRepository(mDatabase.playlistDao(), PlaylistsFirebase(firebaseDatabase, firebaseStorage))
+
         viewModel = ViewModelProvider(this, PlaylistsViewModelFactory(repository)).get(PlaylistsViewModel::class.java)
-        // TODO: Use the ViewModel
+        viewModel.playlistsLiveData.observe(viewLifecycleOwner) {
+            Log.d(TAG, "LiveData observe")
+            it?.let {
+                playlstsAdapter.setData(it)
+            }
+        }
     }
 
     override fun onCreateView(
@@ -50,6 +71,19 @@ class PlaylistListFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_playlist_list, container, false)
 
+
+        val listItemClickListener = object : MyPlaylistRecyclerViewAdapter.OnPlaylistListItemClickListener{
+            override fun onPlaylistItemClicked(playlist: Playlist) {
+                Log.d(TAG, "$playlist")
+                //Toast.makeText(context, playlist.songs?.keys.toString(), Toast.LENGTH_LONG).show()
+                listener.playlistItemClick(playlist)
+//                val intent = Intent(context, PlaylistActivity::class.java)
+//                intent.putExtra(getString(R.string.intent_playlist_key), playlist)
+//                startActivity(intent)
+            }
+        }
+
+        playlstsAdapter = MyPlaylistRecyclerViewAdapter(requireContext(), emptyList<Playlist>(), listItemClickListener)
         // Set the adapter
         if (view is RecyclerView) {
             with(view) {
@@ -57,7 +91,7 @@ class PlaylistListFragment : Fragment() {
                     columnCount <= 1 -> LinearLayoutManager(context)
                     else -> GridLayoutManager(context, columnCount)
                 }
-                adapter = MyPlaylistRecyclerViewAdapter(listOf(Playlist(), Playlist(), Playlist()))
+                adapter = playlstsAdapter
             }
         }
         return view
@@ -81,5 +115,18 @@ class PlaylistListFragment : Fragment() {
     override fun onStart() {
         super.onStart()
         Log.d(TAG, "onStart")
+    }
+
+    interface PlaylistItemClickListener{
+        fun playlistItemClick(playlist: Playlist)
+    }
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        try {
+            listener = context as PlaylistItemClickListener
+        } catch (castException: ClassCastException) {
+            /** The activity does not implement the listener.  */
+        }
     }
 }

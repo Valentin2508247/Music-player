@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/scrolling_menu_item"
-        android:icon="@drawable/round_settings_white_24"
-        android:title="Scrolling"/>
+        android:id="@+id/shared_playlists_menu_item"
+        android:icon="@drawable/baseline_home_white_24"
+        android:title="Shared"/>
     <item
         android:id="@+id/playlists_menu_item"
-        android:icon="@drawable/round_settings_white_24"
+        android:icon="@drawable/ic_play"
         android:title="Playlists"/>
     <item
+        android:id="@+id/liked_menu_item"
+        android:icon="@drawable/like"
+        android:title="Liked"/>
+    <item
         android:id="@+id/songs_menu_item"
-        android:icon="@drawable/round_settings_white_24"
+        android:icon="@drawable/ic_music_player"
         android:title="Songs"/>
 </menu>

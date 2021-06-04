@@ -11,7 +11,8 @@ data class Song(@PrimaryKey var id: String,
     var performer: String?,
     var imagePath: String?,
     var songPath: String?,
-    var url: String?){
+    var imageUrl: String?,
+    var songUrl: String?){
 
-    constructor(): this("", "", "", "", "", "") {}
+    constructor(): this("", "", "", null, null, null, null) {}
 }

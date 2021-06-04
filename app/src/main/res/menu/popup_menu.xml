@@ -4,5 +4,4 @@
             android:title="Delete" />
         <item android:id="@+id/popup_edit"
             android:title="Edit" />
-
 </menu>
