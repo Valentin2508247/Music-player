@@ -268,9 +268,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
                         "next",
                         playbackAction(2)
                 ) as NotificationCompat.Builder
-
-
-
         if (activeSong!!.imageUrl != null)
         {
             var largeIcon = StorageUtil.bitmapFromUrl(activeSong!!.imageUrl!!)
@@ -278,27 +275,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
                 notificationBuilder.setLargeIcon(it)
             }
         }
-
-//        notificationBuilder.
-//            setShowWhen(false) // Set the Notification style
-//            .setStyle(
-//                androidx.media.app.NotificationCompat.MediaStyle() // Attach our MediaSession token
-//                    .setMediaSession(mediaSession!!.sessionToken) // Show our playback controls in the compact notification view.
-//                    .setShowActionsInCompactView(0, 1, 2)
-//            ) // Set the Notification color
-//            .setColor(resources.getColor(R.color.background_light)) // Set the large and small icons
-//            .setLargeIcon(largeIcon)
-//            .setSmallIcon(R.drawable.stat_sys_headset) // Set Notification content information
-//            .setContentText(activeAudio!!.artist)
-//            .setContentTitle(activeAudio!!.album)
-//            .setContentInfo(activeAudio!!.title) // Add playback actions
-//            .addAction(R.drawable.ic_media_previous, "previous", playbackAction(3))
-//            .addAction(notificationAction, "pause", play_pauseAction)
-//            .addAction(
-//                R.drawable.ic_media_next,
-//                "next",
-//                playbackAction(2)
-//            ) as NotificationCompat.Builder
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(
             NOTIFICATION_ID,
             notificationBuilder.build()

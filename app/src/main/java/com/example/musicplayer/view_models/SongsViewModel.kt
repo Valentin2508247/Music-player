@@ -54,19 +54,6 @@ class SongsViewModel(private val repository: SongsRepository, playlistId: String
         }
         //songLiveData = getAllSongs()
         likesLiveData = getLikes()
-        Log.d(TAG, "Updating songs")
-        //loadLikes()
-
-        //updateSongs()
-
-//        else{
-//            val list = playlist.songs?.keys?.toList()
-//            list?.let {
-//
-//                songLiveData = repository.songDao.getSongsByIds(list)
-//            }
-//            // TODO: show message to add songs if no songs in playlist
-//        }
     }
 
     private fun updateSongs()
