@@ -430,7 +430,6 @@ class MainActivity : AppCompatActivity(), PopupMenu.OnMenuItemClickListener, Son
     override fun playSong(pos: Int, songs: List<Song>) {
         //Check is service is active
 
-
         if (!serviceBound) {
             //Store Serializable audioList to SharedPreferences
             val storage = StorageUtil(applicationContext)

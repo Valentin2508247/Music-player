@@ -89,11 +89,12 @@ class MySongListRecyclerViewAdapter(
 
             if (likes.containsKey(song.id)){
                 //liked
-                likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.like_red))
+                likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.baseline_favorite_white_24))
             }
             else {
                 // not liked
-                likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.like))
+                //likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.like))
+                likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.baseline_favorite_border_white_24))
             }
 
             song.imageUrl?.let {
@@ -115,12 +116,12 @@ class MySongListRecyclerViewAdapter(
                 if (likes.containsKey(song.id))
                 {
                     likes.remove(song.id)
-                    likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.like))
+                    likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.baseline_favorite_border_white_24))
                     //unlike song
                 }
                 else{
                     likes[song.id] = true
-                    likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.like_red))
+                    likeIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.baseline_favorite_white_24))
                 }
                 listener.onSongLiked(song, likes)
             }

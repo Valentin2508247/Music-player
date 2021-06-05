@@ -10,7 +10,7 @@
         android:title="Playlists"/>
     <item
         android:id="@+id/liked_menu_item"
-        android:icon="@drawable/like"
+        android:icon="@drawable/baseline_favorite_border_white_24"
         android:title="Liked"/>
     <item
         android:id="@+id/songs_menu_item"

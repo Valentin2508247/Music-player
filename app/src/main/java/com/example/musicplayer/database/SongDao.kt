@@ -5,9 +5,17 @@ import androidx.room.*
 
 @Dao
 interface SongDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertSong(song: Song)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAllSongs(songs: List<Song>)
 
     @Query("Select * from song")
     fun getAllSongs(): LiveData<List<Song>>
+
+    @Delete
+    fun deleteSong(song: Song)
 
     @Query("Select * from song")
     fun getSongs(): List<Song>
@@ -21,16 +29,10 @@ interface SongDao {
     @Query("Delete from song")
     fun deleteAllSongs()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertSong(song: Song)
+    @Query("Select * from likes")
+    fun getLikes(): Likes
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertAllSongs(songs: List<Song>)
-
-    @Delete
-    fun deleteSong(song: Song)
-
-//    // can't return LiveData from transaction
+    //    // can't return LiveData from transaction
 //    @Transaction
 //    fun getLikedSongs(): LiveData<List<Song>>{
 //        val likes = getLikes()
@@ -38,6 +40,4 @@ interface SongDao {
 //        return getSongsByIds(list)
 //    }
 //
-    @Query("Select * from likes")
-    fun getLikes(): Likes
 }
